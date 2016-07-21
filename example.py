@@ -16,7 +16,11 @@ import argparse
 import getpass
 import threading
 import werkzeug.serving
+import location
+from notify import PokeNotifier
+
 import pokemon_pb2
+
 import time
 from google.protobuf.internal import encoder
 from google.protobuf.message import DecodeError
@@ -77,6 +81,11 @@ numbertoteam = {  # At least I'm pretty sure that's it. I could be wrong and the
 }
 origin_lat, origin_lon = None, None
 is_ampm_clock = False
+
+pokenotifier = PokeNotifier(credentials)
+
+rare_pokemon = ("Dragonite", "Flareon", "Exeggutor", "Arcanine", "Victreebel", "Magmar", "Charizard", "Nidoking", "Gengar", "Vileplume", "Rapidash", "Raichu", "Machamp", "Venusaur", "Electabuzz", "Cloyster", "Golduck", "Starmie", "Gyarados", "Jolteon", "Weezing", "Weepinbell", "Kabutops", "Vaporeon", "Lapras", "Blastoise", "Alakazam", "Magneton", "Slowbro", "Nidoqueen", "Pinsir", "Aerodactyl", "Dodrio", "Snorlax", "Muk", "Poliwrath", "Omastar", "Clefable", "Primeape", "Kingler", "Golem", "Ninetales", "Scyther", "Seadra", "Seaking", "Venomoth", "Jynx", "Haunter", "Pidgeot", "Tentacruel", "Dragonair", "Wigglytuff", "Fearow", "Ponyta", "Rhydon", "Arbok", "Golbat", "Tangela", "Hypno", "Parasect", "Gloom", "Charmeleon", "Bellsprout", "Dewgong", "Persian", "Porygon", "Ivysaur", "Growlithe", "Machoke", "Mr. Mime", "Sandslash", "Electrode", "Kadabra", "Tauros", "Hitmonlee", "Dugtrio", "Kabuto", "Beedrill", "Butterfree", "Wartortle", "Kangaskhan", "Graveler", "Marowak", "Farfetch'd", "Hitmonchan", "Koffing", "Gastly", "Omanyte", "Staryu", "Dratini", "Charmander", "Magnemite", "Lickitung", "Bulbasaur", "Grimer", "Pikachu", "Mankey", "Horsea", "Shellder", "Machop", "Slowpoke", "Rhyhorn", "Exeggcute", "Abra", "Diglett", "Tentacool", "Geodude", "Vulpix", "Seel", "Drowzee", "Sandshrew", "Onix", "Chansey")
+ultra_rare_pokemon = ("Dragonite", "Flareon", "Exeggutor", "Arcanine", "Victreebel", "Magmar", "Charizard", "Nidoking", "Gengar", "Vileplume", "Rapidash", "Raichu", "Machamp", "Venusaur", "Electabuzz", "Cloyster", "Gyarados", "Kabutops", "Lapras", "Blastoise", "Alakazam", "Magneton", "Nidoqueen", "Aerodactyl", "Snorlax", "Muk", "Poliwrath", "Omastar", "Primeape", "Kingler", "Golem", "Ninetales", "Jynx", "Haunter", "Tentacruel", "Dragonair", "Wigglytuff", "Tangela", "Hypno", "Charmeleon", "Dewgong", "Persian", "Porygon", "Ivysaur", "Machoke", "Mr. Mime", "Sandslash", "Kadabra", "Hitmonlee", "Dugtrio", "Kabuto", "Butterfree", "Kangaskhan", "Graveler", "Marowak", "Farfetch'd", "Hitmonchan", "Omanyte", "Magnemite", "Lickitung", "Grimer", "Mankey", "Shellder", "Abra", "Onix", "Chansey")
 
 # stuff for in-background search thread
 
@@ -441,7 +450,7 @@ def get_args():
     parser.add_argument('-u', '--username', help='Username', required=True)
     parser.add_argument('-p', '--password', help='Password', required=False)
     parser.add_argument(
-        '-l', '--location', type=parse_unicode, help='Location', required=True)
+        '-l', '--location', type=parse_unicode, help='Location', required=False)
     parser.add_argument('-st', '--step-limit', help='Steps', required=True)
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument(
@@ -497,6 +506,12 @@ def get_args():
     	help="Toggles the AM/PM clock for Pokemon timers",
     	action='store_true',
     	default=False)
+    parser.add_argument(
+        "-R",
+        "--rare_only",
+        help="Only display rare Pokemon",
+        action='store_true',
+        default=False)
     parser.add_argument(
         '-d', '--debug', help='Debug Mode', action='store_true')
     parser.set_defaults(DEBUG=True)
@@ -567,8 +582,14 @@ def main():
 
     # only get location for first run
     if not (FLOAT_LAT and FLOAT_LONG):
-      print('[+] Getting initial location')
-      retrying_set_location(args.location)
+        try:
+            print('[+] Getting initial location')
+            retrying_set_location(args.location)
+        except:
+            print('[!] No location specified! Attempting to retrieve iPhone location...')
+            iPhoneLocation = location.getiPhoneLocation()
+            print('[!] iPhone location retrieved! Found coordinates %s' % iPhoneLocation)
+            retrying_set_location(iPhoneLocation)
 
     if args.auto_refresh:
         global auto_refresh
@@ -690,6 +711,9 @@ transform_from_wgs_to_gcj(Location(Fort.Latitude, Fort.Longitude))
         elif args.only:
             if pokename.lower() not in only and pokeid not in only:
                 continue
+        elif args.rare_only:
+            if pokename not in rare_pokemon:
+                continue
 
         disappear_timestamp = time.time() + poke.TimeTillHiddenMs \
             / 1000
@@ -706,6 +730,10 @@ transform_from_wgs_to_gcj(Location(Fort.Latitude, Fort.Longitude))
             "id": poke.pokemon.PokemonId,
             "name": pokename
         }
+
+        if pokename in ultra_rare_pokemon:
+            pokenotifier.notify(pokemons[poke.SpawnPointId])
+
 
 def clear_stale_pokemons():
     current_time = time.time()
