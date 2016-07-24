@@ -1,16 +1,9 @@
-import json
 from pyicloud import PyiCloudService
 
-with open('credentials.json') as file:
-    credentials = json.load(file)
 
-IPHONE_ID = credentials['iphone_dev_id']
-
-
-def getiPhoneLocation():
-    username, password = credentials['icloud_account']['username'], credentials['icloud_account']['password']
+def get_iphone_location(username, password, device_id):
     api = PyiCloudService(username, password)
 
-    location = api.devices[IPHONE_ID].location()
+    location = api.devices[device_id].location()
 
-    return "%s,%s" % (location['latitude'], location['longitude'])
+    return location['latitude'], location['longitude'], 0

@@ -14,6 +14,7 @@ from pogom.app import Pogom
 from pogom.utils import get_args, insert_mock_data, load_credentials
 from pogom.search import search_loop
 from pogom.models import create_tables, Pokemon, Pokestop, Gym
+from pogom.location import get_iphone_location
 
 from pogom.pgoapi.utilities import get_pos_by_name
 
@@ -48,8 +49,13 @@ if __name__ == '__main__':
 
     position = get_pos_by_name(args.location)
     if not any(position):
-        log.error('Could not get a position by name, aborting.')
-        sys.exit()
+        log.warning('Could not get a position by name, attempting to retrieve iPhone location...')
+        position = get_iphone_location(args.icloud_username, args.icloud_password, args.iphone_device_id)
+        if not any(position):
+            log.error('Could not get a position by iPhone location, aborting.')
+            sys.exit()
+        else:
+            log.info('iPhone location retrieved! Found coordinates %s, %s, %s' % position)
 
     log.info('Parsed location is: {:.4f}/{:.4f}/{:.4f} (lat/lng/alt)'.
              format(*position))

@@ -31,13 +31,16 @@ def parse_config(args):
     if Config.get('Misc', 'Google_Maps_API_Key') :
         args.gmaps_key = Config.get('Misc', 'Google_Maps_API_Key') 
     args.host = Config.get('Misc', 'Host') 
-    args.port = Config.get('Misc', 'Port') 
+    args.port = Config.get('Misc', 'Port')
+    args.iphone_device_id = Config.get('Location_Services', 'iPhone_Device_ID')
+    args.icloud_username = Config.get('Location_Services', 'iCloud_Username')
+    args.icloud_password = Config.get('Location_Services', 'iCloud_Password')
     return args
 
 def get_args():
     # fuck PEP8
     parser = argparse.ArgumentParser()
-    parser.add_argument('-se', '--settings',action='store_true',default=False)
+    parser.add_argument('-se', '--settings', action='store_true', default=False)
     parser.add_argument('-a', '--auth-service', type=str.lower, help='Auth Service', default='ptc')
     parser.add_argument('-u', '--username', help='Username', required=False)
     parser.add_argument('-p', '--password', help='Password', required=False)
@@ -58,16 +61,19 @@ def get_args():
     parser.add_argument('-D', '--db', help='Database filename', default='pogom.db')
     parser.add_argument('-t', '--threads', help='Number of search threads', required=False, type=int, default=5, dest='num_threads')
     parser.add_argument("-R", "--rare_only", help="Only display rare Pokemon", action='store_true', default=False)
+    parser.add_argument("-di", "--iphone-device-id", help="Device ID of iPhone", required=False)
+    parser.add_argument("-iu", "--icloud-username", help="Username of iCloud account", required=False)
+    parser.add_argument("-ip", "--icloud-password", help="Password of iCloud account", required=False)
     parser.set_defaults(DEBUG=False)
     args = parser.parse_args()
 
-    if (args.settings):
+    if args.settings:
         args = parse_config(args) 
     else:
-        if (args.username is None or args.location is None or args.step_limit is None):
+        if args.username is None or args.step_limit is None:
             parser.print_usage()
-            print sys.argv[0] + ': error: arguments -u/--username, -l/--location, -st/--step-limit are required'
-            sys.exit(1);
+            print sys.argv[0] + ': error: arguments -u/--username, -st/--step-limit are required'
+            sys.exit(1)
 
         if args.password is None:
             args.password = getpass.getpass()
