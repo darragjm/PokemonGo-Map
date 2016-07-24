@@ -1,17 +1,20 @@
 import email
 import smtplib
+import pytz
 import time
+from tzlocal import get_localzone
 
 import staticmap
 
 
 class PokeNotifier(object):
-    def __init__(self, credentials):
+    def __init__(self, username, password):
         self.pokeset = set()
-        self.credentials = credentials
+        self.username = username
+        self.password = password
 
-    def notify(self, pokemon):
-        pokehash = str(pokemon['id']) + str(pokemon['lat']) + str(pokemon['lng'])
+    def notify(self, pokemon, pokename, disappear_time):
+        pokehash = str(pokemon['pokemon_data']['pokemon_id']) + str(pokemon['latitude']) + str(pokemon['longitude'])
 
         if pokehash in self.pokeset:
             print('[!] Notification already sent for this Pokemon! Skipping...')
@@ -19,8 +22,7 @@ class PokeNotifier(object):
 
         self.pokeset.add(pokehash)
 
-        username, password = self.credentials['gmail_account']['username'], \
-                             self.credentials['gmail_account']['password']
+        username, password = self.username, self.password
 
         fromaddr = username
         toaddrs = ['YOUR_EMAIL_ADDRESS']
@@ -30,17 +32,19 @@ class PokeNotifier(object):
 
             msg['From'] = fromaddr
             msg['To'] = toaddr
-            msg['Subject'] = "[Pokebot] Pokemon Located! - %s" % pokemon['name']
+            msg['Subject'] = "[Pokebot] Pokemon Located! - %s" % pokename
 
-            disappear_datetime = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(pokemon['disappear_time']))
-            body = '\r\n'.join(("Pokemon Name: %s" % pokemon['name'],
-                                "Disappears at: %s" % disappear_datetime,
+            disappear_time = disappear_time.replace(tzinfo=pytz.utc).astimezone(get_localzone())
+            disappear_time_string = time.strftime('%Y-%m-%d %H:%M:%S', disappear_time.timetuple())
+
+            body = '\r\n'.join(("Pokemon Name: %s" % pokename,
+                                "Disappears at: %s" % disappear_time_string,
                                 "", ""))
 
             msg.attach(email.MIMEText.MIMEText(body, 'plain'))
 
             filename = "pokemap.png"
-            attachment = staticmap.getStaticMap(pokemon['lat'], pokemon['lng'])
+            attachment = staticmap.getStaticMap(pokemon['latitude'], pokemon['longitude'])
 
             part = email.MIMEBase.MIMEBase('application', 'octet-stream')
             part.set_payload((attachment).read())

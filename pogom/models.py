@@ -7,15 +7,19 @@ from peewee import Model, SqliteDatabase, InsertQuery, IntegerField,\
 from datetime import datetime
 from datetime import timedelta
 from base64 import b64encode
+import json
 
 from .utils import get_pokemon_name, get_args
 from .transform import transform_from_wgs_to_gcj
 from .customLog import printPokemon
+from .pokelists import ultra_rare_pokemon
+from .notify import PokeNotifier
 
 args = get_args()
 db = SqliteDatabase(args.db)
 log = logging.getLogger(__name__)
-
+pokemon_index = json.load(open('./static/locales/pokemon.en.json'))
+pokenotifier = PokeNotifier(args.username, args.password)
 
 class BaseModel(Model):
     class Meta:
@@ -124,6 +128,11 @@ def parse_map(map_dict, iteration_num, step, step_location):
                 'longitude': p['longitude'],
                 'disappear_time': d_t
             }
+
+            if args.notifications and p['pokemon_data']:
+                pokename = pokemon_index[str(p['pokemon_data']['pokemon_id'])]
+                if pokename in ultra_rare_pokemon:
+                    pokenotifier.notify(p, pokename, d_t)
 
         if iteration_num > 0 or step > 50:
             for f in cell.get('forts', []):
