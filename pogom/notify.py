@@ -1,10 +1,13 @@
 import email
-import smtplib
+import logging
 import pytz
+import smtplib
 import time
 from tzlocal import get_localzone
 
 import staticmap
+
+log = logging.getLogger(__name__)
 
 
 class PokeNotifier(object):
@@ -17,7 +20,7 @@ class PokeNotifier(object):
         pokehash = str(pokemon['pokemon_data']['pokemon_id']) + str(pokemon['latitude']) + str(pokemon['longitude'])
 
         if pokehash in self.pokeset:
-            print('[!] Notification already sent for this Pokemon! Skipping...')
+            log.info('Notification already sent for this Pokemon! Skipping...')
             return
 
         self.pokeset.add(pokehash)
@@ -60,6 +63,6 @@ class PokeNotifier(object):
                 server.login(username, password)
                 text = msg.as_string()
                 server.sendmail(fromaddr, toaddr, text)
-                print("[!] PokeNotifier successfully sent notification email")
+                log.info("PokeNotifier successfully sent notification email")
             except smtplib.SMTPException:
-                print("[!] Error: PokeNotifier unable to send notification email")
+                log.error("PokeNotifier unable to send notification email")
