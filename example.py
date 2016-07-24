@@ -50,6 +50,7 @@ ANDROID_ID = credentials.get('android_id', None)
 SERVICE = credentials.get('service', None)
 CLIENT_SIG = credentials.get('client_sig', None)
 GOOGLEMAPS_KEY = credentials.get('gmaps_key', None)
+GOOGLE_ACCOUNT = credentials.get('gmail_account', None)
 
 SESSION = requests.session()
 SESSION.headers.update({'User-Agent': 'Niantic App'})
@@ -85,7 +86,7 @@ is_ampm_clock = False
 pokenotifier = PokeNotifier(credentials)
 
 rare_pokemon = ("Dragonite", "Flareon", "Exeggutor", "Arcanine", "Victreebel", "Magmar", "Charizard", "Nidoking", "Gengar", "Vileplume", "Rapidash", "Raichu", "Machamp", "Venusaur", "Electabuzz", "Cloyster", "Golduck", "Starmie", "Gyarados", "Jolteon", "Weezing", "Weepinbell", "Kabutops", "Vaporeon", "Lapras", "Blastoise", "Alakazam", "Magneton", "Slowbro", "Nidoqueen", "Pinsir", "Aerodactyl", "Dodrio", "Snorlax", "Muk", "Poliwrath", "Omastar", "Clefable", "Primeape", "Kingler", "Golem", "Ninetales", "Scyther", "Seadra", "Seaking", "Venomoth", "Jynx", "Haunter", "Pidgeot", "Tentacruel", "Dragonair", "Wigglytuff", "Fearow", "Ponyta", "Rhydon", "Arbok", "Golbat", "Tangela", "Hypno", "Parasect", "Gloom", "Charmeleon", "Bellsprout", "Dewgong", "Persian", "Porygon", "Ivysaur", "Growlithe", "Machoke", "Mr. Mime", "Sandslash", "Electrode", "Kadabra", "Tauros", "Hitmonlee", "Dugtrio", "Kabuto", "Beedrill", "Butterfree", "Wartortle", "Kangaskhan", "Graveler", "Marowak", "Farfetch'd", "Hitmonchan", "Koffing", "Gastly", "Omanyte", "Staryu", "Dratini", "Charmander", "Magnemite", "Lickitung", "Bulbasaur", "Grimer", "Pikachu", "Mankey", "Horsea", "Shellder", "Machop", "Slowpoke", "Rhyhorn", "Exeggcute", "Abra", "Diglett", "Tentacool", "Geodude", "Vulpix", "Seel", "Drowzee", "Sandshrew", "Onix", "Chansey")
-ultra_rare_pokemon = ("Dragonite", "Flareon", "Exeggutor", "Arcanine", "Victreebel", "Magmar", "Charizard", "Nidoking", "Gengar", "Vileplume", "Rapidash", "Raichu", "Machamp", "Venusaur", "Electabuzz", "Cloyster", "Gyarados", "Kabutops", "Lapras", "Blastoise", "Alakazam", "Magneton", "Nidoqueen", "Aerodactyl", "Snorlax", "Muk", "Poliwrath", "Omastar", "Primeape", "Kingler", "Golem", "Ninetales", "Jynx", "Haunter", "Tentacruel", "Dragonair", "Wigglytuff", "Tangela", "Hypno", "Charmeleon", "Dewgong", "Persian", "Porygon", "Ivysaur", "Machoke", "Mr. Mime", "Sandslash", "Kadabra", "Hitmonlee", "Dugtrio", "Kabuto", "Butterfree", "Kangaskhan", "Graveler", "Marowak", "Farfetch'd", "Hitmonchan", "Omanyte", "Magnemite", "Lickitung", "Grimer", "Mankey", "Shellder", "Abra", "Onix", "Chansey")
+ultra_rare_pokemon = ("Dragonite", "Flareon", "Exeggutor", "Arcanine", "Victreebel", "Magmar", "Charizard", "Nidoking", "Gengar", "Vileplume", "Rapidash", "Raichu", "Machamp", "Venusaur", "Electabuzz", "Cloyster", "Gyarados", "Kabutops", "Lapras", "Blastoise", "Alakazam", "Magneton", "Nidoqueen", "Aerodactyl", "Snorlax", "Muk", "Poliwrath", "Omastar", "Primeape", "Kingler", "Golem", "Ninetales", "Jynx", "Haunter", "Tentacruel", "Dragonair", "Wigglytuff", "Tangela", "Ponyta", "Hypno", "Charmeleon", "Dewgong", "Persian", "Porygon", "Ivysaur", "Machoke", "Mr. Mime", "Sandslash", "Kadabra", "Hitmonlee", "Dugtrio", "Kabuto", "Butterfree", "Kangaskhan", "Graveler", "Marowak", "Farfetch'd", "Hitmonchan", "Omanyte", "Magnemite", "Lickitung", "Grimer", "Mankey", "Shellder", "Abra", "Onix", "Chansey")
 
 # stuff for in-background search thread
 
@@ -437,6 +438,9 @@ def get_token(service, username, password):
         if service == 'ptc':
             global_token = login_ptc(username, password)
         else:
+            if not username:
+                username = GOOGLE_ACCOUNT['username']
+                password = GOOGLE_ACCOUNT['password']
             global_token = login_google(username, password)
         return global_token
     else:
@@ -447,7 +451,7 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-a', '--auth_service', type=str.lower, help='Auth Service', default='ptc')
-    parser.add_argument('-u', '--username', help='Username', required=True)
+    parser.add_argument('-u', '--username', help='Username', required=False)
     parser.add_argument('-p', '--password', help='Password', required=False)
     parser.add_argument(
         '-l', '--location', type=parse_unicode, help='Location', required=False)
