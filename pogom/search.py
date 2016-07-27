@@ -108,22 +108,21 @@ def search_thread(args):
     response_dict = {}
     failed_consecutive = 0
     while not response_dict:
+        sem.acquire()
         response_dict = send_map_request(api, step_location)
+        sem.release()
         if response_dict:
             try:
-                sem.acquire()
                 parse_map(response_dict, i, step, step_location)
             except KeyError:
                 log.error('Scan step {:d} failed. Response dictionary key error.'.format(step))
                 failed_consecutive += 1
-                if(failed_consecutive >= config['REQ_MAX_FAILED']):
+                if (failed_consecutive >= config['REQ_MAX_FAILED']):
                     log.error('Niantic servers under heavy load. Waiting before trying again')
                     time.sleep(config['REQ_HEAVY_SLEEP'])
                     failed_consecutive = 0
-            finally:
-                sem.release()
-        else:
-            log.info('Map Download failed. Trying again.')
+                else:
+                    log.info('Map Download failed. Trying again.')
 
     time.sleep(config['REQ_SLEEP'])
 
