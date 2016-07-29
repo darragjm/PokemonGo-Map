@@ -259,10 +259,10 @@ def parse_map(map_dict, iteration_num, step, step_location):
 
                 send_to_webhook('pokemon', webhook_data)
 
-            if args.notifications and p['pokemon_data']:
-                pokename = pokemon_index[str(p['pokemon_data']['pokemon_id'])]
-                if pokename in ultra_rare_pokemon:
-                    pokenotifier.notify(p, pokename, d_t)
+                if args.notifications and p['pokemon_data']:
+                    pokename = pokemon_index[str(p['pokemon_data']['pokemon_id'])]
+                    if pokename in ultra_rare_pokemon:
+                        pokenotifier.notify(p, pokename, d_t)
 
         if iteration_num > 0 or step > 50:
             for f in cell.get('forts', []):
