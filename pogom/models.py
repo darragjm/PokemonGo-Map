@@ -28,7 +28,7 @@ flaskDb = FlaskDB()
 
 pokemon_index = json.load(open('./static/data/pokemon.json'))
 pokenotifier = PokeNotifier(args.username, args.password)
-spawn_tracker = SpawnTracker()
+
 
 class MyRetryDB(RetryOperationalError, PooledMySQLDatabase):
     pass
@@ -287,16 +287,6 @@ def parse_map(map_dict, iteration_num, step, step_location):
                     pokename = pokemon_index[str(p['pokemon_data']['pokemon_id'])]['name']
                     if pokename in ultra_rare_pokemon:
                         pokenotifier.notify(p, pokename, d_t)
-
-                if args.track_spawns and p['pokemon_data']:
-                    spawn_tracker.add_spawn(
-                        p['pokemon_data']['pokemon_id'],
-                        b64encode(str(p['encounter_id'])),
-                        p['last_modified_timestamp_ms'] / 1000.0,
-                        p['time_till_hidden_ms'] / 1000.0,
-                        p['latitude'],
-                        p['longitude']
-                    )
 
         for f in cell.get('forts', []):
             if config['parse_pokestops'] and f.get('type') == 1:  # Pokestops
