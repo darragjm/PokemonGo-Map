@@ -6,21 +6,24 @@ import sys
 import logging
 import time
 
-from threading import Thread
+# Moved here so logger is configured at load time
+logging.basicConfig(format='%(asctime)s [%(threadName)14s][%(module)14s] [%(levelname)7s] %(message)s')
+log = logging.getLogger()
+
+from threading import Thread, Event
 from flask_cors import CORS
 
 from pogom import config
 from pogom.app import Pogom
 
 from pogom.utils import get_args, insert_mock_data
+
 from pogom.search import search_loop, create_search_threads, fake_search_loop
-from pogom.models import init_database, create_tables, Pokemon, Pokestop, Gym
+from pogom.models import init_database, create_tables, drop_tables, Pokemon, Pokestop, Gym
 from pogom.location import get_iphone_location
 
 from pogom.pgoapi.utilities import get_pos_by_name
 
-logging.basicConfig(format='%(asctime)s [%(module)14s] [%(levelname)7s] %(message)s')
-log = logging.getLogger()
 
 if __name__ == '__main__':
     args = get_args()
@@ -29,6 +32,12 @@ if __name__ == '__main__':
         log.setLevel(logging.DEBUG);
     else:
         log.setLevel(logging.INFO);
+
+    # Let's not forget to run Grunt / Only needed when running with webserver
+    if not args.no_server:
+        if not os.path.exists(os.path.join(os.path.dirname(__file__), 'static/dist')):
+            log.critical('Please run "grunt build" before starting the server.');
+            sys.exit();
 
     # These are very noisey, let's shush them up a bit
     logging.getLogger("peewee").setLevel(logging.INFO)
@@ -47,8 +56,6 @@ if __name__ == '__main__':
         logging.getLogger("pgoapi").setLevel(logging.DEBUG)
         logging.getLogger("rpc_api").setLevel(logging.DEBUG)
 
-    db = init_database()
-    create_tables(db)
 
     position = get_pos_by_name(args.location)
     if not any(position):
@@ -74,12 +81,25 @@ if __name__ == '__main__':
     config['LOCALE'] = args.locale
     config['CHINA'] = args.china
 
+    app = Pogom(__name__)
+    db = init_database(app)
+    if args.clear_db:
+        if args.db_type == 'mysql':
+            drop_tables(db)
+        elif os.path.isfile(args.db):
+            os.remove(args.db)
+    create_tables(db)
+
+    # Control the search status (running or not) across threads; set it "on"
+    search_control = Event()
+    search_control.set()
+
     if not args.only_server:
         # Gather the pokemons!
         if not args.mock:
             log.debug('Starting a real search thread and {} search runner thread(s)'.format(args.num_threads))
-            create_search_threads(args.num_threads)
-            search_thread = Thread(target=search_loop, args=(args,))
+            create_search_threads(args.num_threads, search_control)
+            search_thread = Thread(target=search_loop, args=(args,search_control,))
         else:
             log.debug('Starting a fake search thread')
             insert_mock_data()
@@ -89,10 +109,10 @@ if __name__ == '__main__':
         search_thread.name = 'search_thread'
         search_thread.start()
 
-    app = Pogom(__name__)
-
     if args.cors:
         CORS(app);
+
+    app.set_search_control(search_control)
 
     config['ROOT_PATH'] = app.root_path
     config['GMAPS_KEY'] = args.gmaps_key

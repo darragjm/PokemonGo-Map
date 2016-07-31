@@ -73,6 +73,9 @@ def get_args():
     parser.add_argument('-os', '--only-server',
                         help='Server-Only Mode. Starts only the Webserver without the searcher.',
                         action='store_true', default=False)
+    parser.add_argument('-nsc','--no-search-control',
+                        help='Disables search control',
+                        action='store_false', dest='search_control', default=True)
     parser.add_argument('-fl', '--fixed-location',
                         help='Hides the search bar for use in shared maps.',
                         action='store_true', default=False)
@@ -83,6 +86,9 @@ def get_args():
                         action='store_true', default=False)
     parser.add_argument('-D', '--db', help='Database filename',
                         default='pogom.db')
+    parser.add_argument('-cd', '--clear-db',
+                        help='Deletes the existing database before starting the Webserver.',
+                        action='store_true', default=False)
     parser.add_argument('-t', '--num-threads', help='Number of search threads', type=int, default=1)
     parser.add_argument('-np', '--no-pokemon',
                         help='Disables Pokemon from the map (including parsing them into local db)',
@@ -99,6 +105,7 @@ def get_args():
     parser.add_argument('--db-user', help='Username for the database')
     parser.add_argument('--db-pass', help='Password for the database')
     parser.add_argument('--db-host', help='IP or hostname for the database')
+    parser.add_argument('--db-max_connections', help='Max connections for the database', type=int, default=5)
     parser.add_argument('-wh', '--webhook', help='Define URL(s) to POST webhook information to',
                         nargs='*', default=False, dest='webhooks')
     parser.add_argument("-R", "--rare_only", help="Only display rare Pokemon", action='store_true', default=False)
@@ -150,7 +157,7 @@ def insert_mock_data():
 
     detect_time = datetime.now()
 
-    for i in range(num_pokemon):
+    for i in range(1, num_pokemon):
         Pokemon.create(encounter_id=uuid.uuid4(),
                        spawnpoint_id='sp{}'.format(i),
                        pokemon_id=(i+1) % 150,
@@ -159,7 +166,7 @@ def insert_mock_data():
                        disappear_time=disappear_time,
                        detect_time=detect_time)
 
-    for i in range(num_pokestop):
+    for i in range(1, num_pokestop):
         Pokestop.create(pokestop_id=uuid.uuid4(),
                         enabled=True,
                         latitude=locations[i+num_pokemon][0],
@@ -170,7 +177,7 @@ def insert_mock_data():
                         active_pokemon_id=i
                         )
 
-    for i in range(num_gym):
+    for i in range(1, num_gym):
         Gym.create(gym_id=uuid.uuid4(),
                    team_id=i % 3,
                    guard_pokemon_id=(i+1) % 150,
@@ -181,19 +188,47 @@ def insert_mock_data():
                    gym_points=1000
                    )
 
-
-def get_pokemon_name(pokemon_id):
-    if not hasattr(get_pokemon_name, 'names'):
+def i8ln(word):
+    log.debug("Translating: %s", word)
+    if config['LOCALE'] == "en": return word
+    if not hasattr(i8ln, 'dictionary'):
         file_path = os.path.join(
             config['ROOT_PATH'],
             config['LOCALES_DIR'],
-            'pokemon.{}.json'.format(config['LOCALE']))
+            '{}.json'.format(config['LOCALE']))
+        if os.path.isfile(file_path):
+            with open(file_path, 'r') as f:
+                i8ln.dictionary = json.loads(f.read())
+        else:
+            log.warning("Skipping translations - Unable to find locale file: %s", file_path)
+            return word
+    if word in i8ln.dictionary:
+        log.debug("Translation = %s", i8ln.dictionary[word])
+        return i8ln.dictionary[word]
+    else:
+        log.debug("Unable to find translation!")
+        return word
+
+def get_pokemon_data(pokemon_id):
+    if not hasattr(get_pokemon_data, 'pokemon'):
+        file_path = os.path.join(
+            config['ROOT_PATH'],
+            config['DATA_DIR'],
+            'pokemon.json')
 
         with open(file_path, 'r') as f:
-            get_pokemon_name.names = json.loads(f.read())
+            get_pokemon_data.pokemon = json.loads(f.read())
+    return get_pokemon_data.pokemon[str(pokemon_id)]
 
-    return get_pokemon_name.names[str(pokemon_id)]
+def get_pokemon_name(pokemon_id):
+    return i8ln(get_pokemon_data(pokemon_id)['name'])
 
+def get_pokemon_rarity(pokemon_id):
+    return i8ln(get_pokemon_data(pokemon_id)['rarity'])
+
+def get_pokemon_types(pokemon_id):
+    pokemon_types = get_pokemon_data(pokemon_id)['types']
+    return map(lambda x: {"type": i8ln(x['type']), "color": x['color']}, pokemon_types)
 
 def send_to_webhook(message_type, message):
     args = get_args()

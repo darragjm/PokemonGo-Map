@@ -31,3 +31,6 @@
 #iphone-device-id:
 #icloud-username:
 #icloud-password:
+
+#Uncomment a line when you want to change its default value (Remove # at the beginning)
+#username, password, location and gmaps-key are required

@@ -76,7 +76,7 @@ def generate_location_steps(initial_loc, step_count):
     SOUTH = 180
     WEST = 270
 
-    pulse_radius = 0.1                  # km - radius of players heartbeat is 100m
+    pulse_radius = 0.07                 # km - radius of players heartbeat is 70m
     xdist = math.sqrt(3)*pulse_radius   # dist between column centers
     ydist = 3*(pulse_radius/2)          # dist between row centers
 
@@ -125,22 +125,25 @@ def login(args, position):
 #
 # Search Threads Logic
 #
-def create_search_threads(num):
+def create_search_threads(num, search_control):
     search_threads = []
     for i in range(num):
-        t = Thread(target=search_thread, name='search_thread-{}'.format(i), args=(search_queue,))
+        t = Thread(target=search_thread, name='search_thread-{}'.format(i), args=(search_queue,search_control,))
         t.daemon = True
         t.start()
         search_threads.append(t)
 
 
-def search_thread(q):
+def search_thread(q, search_control):
     threadname = threading.currentThread().getName()
     log.debug("Search thread {}: started and waiting".format(threadname))
     while True:
 
         # Get the next item off the queue (this blocks till there is something)
         i, step_location, step, lock = q.get()
+
+        # Pause if searching is disabled
+        search_control.wait()
 
         # If a new location has been set, just mark done and continue
         if 'NEXT_LOCATION' in config:
@@ -180,9 +183,9 @@ def search_thread(q):
 #
 # Search Overseer
 #
-def search_loop(args):
+def search_loop(args, search_control):
     i = 0
-    while True:
+    while search_control.wait():
         log.info("Search loop {} starting".format(i))
         try:
             search(args, i)
@@ -215,8 +218,7 @@ def search(args, i):
         remaining_time = api._auth_provider._ticket_expire/1000 - time.time()
 
         if remaining_time > 60:
-            log.info("Skipping Pokemon Go login process since already logged in \
-                for another {:.2f} seconds".format(remaining_time))
+            log.info("Current login valid for {:.2f} seconds".format(remaining_time))
         else:
             login(args, position)
     else:
