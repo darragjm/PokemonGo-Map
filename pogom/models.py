@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 args = get_args()
 flaskDb = FlaskDB()
 
-pokemon_index = json.load(open('./static/locales/pokemon.en.json'))
+pokemon_index = json.load(open('./static/data/pokemon.json'))
 pokenotifier = PokeNotifier(args.username, args.password)
 spawn_tracker = SpawnTracker()
 
@@ -282,7 +282,7 @@ def parse_map(map_dict, iteration_num, step, step_location):
                 send_to_webhook('pokemon', webhook_data)
 
                 if args.notifications and p['pokemon_data']:
-                    pokename = pokemon_index[str(p['pokemon_data']['pokemon_id'])]
+                    pokename = pokemon_index[str(p['pokemon_data']['pokemon_id'])]['name']
                     if pokename in ultra_rare_pokemon:
                         pokenotifier.notify(p, pokename, d_t)
 
