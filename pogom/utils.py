@@ -117,6 +117,8 @@ def get_args():
     parser.add_argument("-ip", "--icloud-password", help="Password of iCloud account", required=False)
     parser.add_argument("-n", "--notifications", help="Send email notifications of ultra rare Pokemon",
                         action='store_true', required=False)
+    parser.add_argument("-ts", "--track-spawns", help="Track spawns in MySQL database",
+                        action='store_true', required=False)
     parser.set_defaults(DEBUG=False)
 
     args = parser.parse_args()
