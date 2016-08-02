@@ -3,7 +3,7 @@
 
 import logging
 import os
-import time
+import calendar
 from peewee import Model, SqliteDatabase, InsertQuery,\
                    IntegerField, CharField, DoubleField, BooleanField,\
                    DateTimeField, OperationalError, create_model_tables
@@ -248,7 +248,7 @@ class ScannedLocation(BaseModel):
         return scans
 
 
-def parse_map(map_dict, iteration_num, step, step_location):
+def parse_map(map_dict, step_location):
     pokemons = {}
     pokestops = {}
     gyms = {}
@@ -278,7 +278,7 @@ def parse_map(map_dict, iteration_num, step, step_location):
                     'pokemon_id': p['pokemon_data']['pokemon_id'],
                     'latitude': p['latitude'],
                     'longitude': p['longitude'],
-                    'disappear_time': time.mktime(d_t.timetuple()),
+                    'disappear_time': calendar.timegm(d_t.timetuple()),
                     'last_modified_time': p['last_modified_timestamp_ms'],
                     'time_until_hidden_ms': p['time_till_hidden_ms']
                 }
@@ -362,6 +362,8 @@ def parse_map(map_dict, iteration_num, step, step_location):
     }
 
     bulk_upsert(ScannedLocation, scanned)
+    
+    return True
 
 
 
