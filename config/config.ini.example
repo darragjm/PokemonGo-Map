@@ -32,5 +32,9 @@
 #icloud-username:
 #icloud-password:
 
+# Notifier settings
+#gmail-username:
+#gmail-password:
+
 #Uncomment a line when you want to change its default value (Remove # at the beginning)
 #username, password, location and gmaps-key are required

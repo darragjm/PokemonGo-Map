@@ -28,7 +28,7 @@ args = get_args()
 flaskDb = FlaskDB()
 
 pokemon_index = json.load(open('./static/data/pokemon.json'))
-pokenotifier = PokeNotifier(args.username, args.password)
+pokenotifier = PokeNotifier(args.gmail_username, args.gmail_password)
 spawn_tracker = SpawnTracker()
 
 
