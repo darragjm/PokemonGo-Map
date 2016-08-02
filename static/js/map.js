@@ -604,7 +604,7 @@ function setupPokemonMarker(item, skipNotification, isBounceDisabled) {
       if (Store.get('playSound')) {
         audio.play();
       }
-      sendNotification('A wild ' + item.pokemon_name + ' appeared!', 'Click to load map', 'static/icons/' + item.pokemon_id + '.png', item.latitude, item.longitude);
+      sendNotification('A wild ' + item.pokemon_name + ' appeared!', 'Click to load map', 'static/icons/' + item.pokemon_id + '.png', item.latitude, item.longitude, item.disappear_time);
     }
     if (marker.animationDisabled != true) {
       marker.setAnimation(google.maps.Animation.BOUNCE);
@@ -994,9 +994,14 @@ function getPointDistance(pointA, pointB) {
   return google.maps.geometry.spherical.computeDistanceBetween(pointA, pointB);
 }
 
-function sendNotification(title, text, icon, lat, lng) {
+function sendNotification(title, text, icon, lat, lng, ttt) {
   if (!("Notification" in window)) {
     return false; // Notifications are not present in browser
+  }
+
+  var now = new Date();
+  if (ttt < now) {
+    return false;
   }
 
   if (Notification.permission !== "granted") {
