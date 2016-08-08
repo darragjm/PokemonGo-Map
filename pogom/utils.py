@@ -10,6 +10,11 @@ from datetime import datetime, timedelta
 import logging
 import shutil
 import requests
+import platform
+
+from importlib import import_module
+from s2sphere import LatLng, CellId
+from geopy.geocoders import GoogleV3
 
 from . import config
 
@@ -44,10 +49,16 @@ def get_args():
                         default=12)
     parser.add_argument('-sd', '--scan-delay',
                         help='Time delay between requests in scan threads',
-                        type=float, default=5)
+                        type=float, default=10)
     parser.add_argument('-ld', '--login-delay',
                         help='Time delay between each login attempt',
                         type=float, default=5)
+    parser.add_argument('-lr', '--login-retries',
+                        help='Number of logins attempts before refreshing a thread',
+                        type=int, default=3)
+    parser.add_argument('-sr', '--scan-retries',
+                        help='Number of retries for a given scan cell',
+                        type=int, default=5)
     parser.add_argument('-dc', '--display-in-console',
                         help='Display Found Pokemon in Console',
                         action='store_true', default=False)
@@ -103,6 +114,7 @@ def get_args():
     parser.add_argument('--db-user', help='Username for the database')
     parser.add_argument('--db-pass', help='Password for the database')
     parser.add_argument('--db-host', help='IP or hostname for the database')
+    parser.add_argument('--db-port', help='Port for the database', type=int, default=3306)
     parser.add_argument('--db-max_connections', help='Max connections for the database', type=int, default=5)
     parser.add_argument('-wh', '--webhook', help='Define URL(s) to POST webhook information to',
                         nargs='*', default=False, dest='webhooks')
@@ -278,3 +290,39 @@ def send_to_webhook(message_type, message):
                 log.debug('Response timeout on webhook endpoint %s', w)
             except requests.exceptions.RequestException as e:
                 log.debug(e)
+
+def get_encryption_lib_path():
+    lib_path = ""
+    # win32 doesn't mean necessarily 32 bits
+    if sys.platform == "win32" or sys.platform == "cygwin":
+        if platform.architecture()[0] == '64bit':
+            lib_path = os.path.join(os.path.dirname(__file__), "encrypt64bit.dll")
+        else:
+            lib_path = os.path.join(os.path.dirname(__file__), "encrypt32bit.dll")
+
+    elif sys.platform == "darwin":
+        lib_path = os.path.join(os.path.dirname(__file__), "libencrypt-osx-64.so")
+
+    elif os.uname()[4].startswith("arm") and platform.architecture()[0] == '32bit':
+        lib_path = os.path.join(os.path.dirname(__file__), "libencrypt-linux-arm-32.so")
+
+    elif sys.platform.startswith('linux'):
+        if platform.architecture()[0] == '64bit':
+            lib_path = os.path.join(os.path.dirname(__file__), "libencrypt-linux-x86-64.so")
+        else:
+            lib_path = os.path.join(os.path.dirname(__file__), "libencrypt-linux-x86-32.so")
+
+    elif sys.platform.startswith('freebsd-10'):
+        lib_path = os.path.join(os.path.dirname(__file__), "libencrypt-freebsd10-64.so") 
+
+    else:
+        err = "Unexpected/unsupported platform '{}'".format(sys.platform)
+        log.error(err)
+        raise Exception(err)
+
+    if not os.path.isfile(lib_path):
+        err = "Could not find {} encryption library {}".format(sys.platform, lib_path)
+        log.error(err)
+        raise Exception(err)
+
+    return lib_path
