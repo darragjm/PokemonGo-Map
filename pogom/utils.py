@@ -28,6 +28,20 @@ def verify_config_file_exists(filename):
         shutil.copy2(fullpath + '.example', fullpath)
 
 
+def memoize(function):
+    memo = {}
+
+    def wrapper(*args):
+        if args in memo:
+            return memo[args]
+        else:
+            rv = function(*args)
+            memo[args] = rv
+            return rv
+    return wrapper
+
+
+@memoize
 def get_args():
     # fuck PEP8
     configpath = os.path.join(os.path.dirname(__file__), '../config/config.ini')
@@ -88,6 +102,8 @@ def get_args():
     parser.add_argument('-k', '--gmaps-key',
                         help='Google Maps Javascript API Key',
                         required=True)
+    parser.add_argument('--spawnpoints-only', help='Only scan locations with spawnpoints in them.',
+                        action='store_true', default=False)
     parser.add_argument('-C', '--cors', help='Enable CORS on web server',
                         action='store_true', default=False)
     parser.add_argument('-D', '--db', help='Database filename',
@@ -129,6 +145,8 @@ def get_args():
     parser.add_argument('-gp', '--gmail-password', help='Gmail account password to send email notifications.')
     parser.add_argument("-ts", "--track-spawns", help="Track spawns in MySQL database",
                         action='store_true', required=False)
+    parser.add_argument('--ssl-certificate', help='Path to SSL certificate file')
+    parser.add_argument('--ssl-privatekey', help='Path to SSL private key file')
     parser.set_defaults(DEBUG=False)
 
     args = parser.parse_args()
